@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>משחק חשבון כיתה ב'</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: center;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 350px;
+        }
+        #question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .answer-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        button {
+            font-size: 18px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #score, #timer, #level {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        #feedback {
+            font-size: 16px;
+            margin-top: 10px;
+            height: 30px;
+        }
+        .difficulty-select {
+            margin-bottom: 10px;
+        }
+        .life {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: red;
+            border-radius: 50%;
+            margin: 0 5px;
+        }
+        .life.lost {
+            background-color: gray;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>משחק החשבון שלי</h1>
+        <div class="difficulty-select">
+            <label for="difficulty">רמת קושי:</label>
+            <select id="difficulty">
+                <option value="easy">קל</option>
+                <option value="medium">בינוני</option>
+                <option value="hard">קשה</option>
+            </select>
+        </div>
+        <div id="lives">
+            <span class="life"></span>
+            <span class="life"></span>
+            <span class="life"></span>
+        </div>
+        <div id="timer">זמן: 30 שניות</div>
+        <div id="level">רמה: 1</div>
+        <div id="question"></div>
+        <div class="answer-buttons" id="answers"></div>
+        <div id="feedback"></div>
+        <div id="score">ניקוד: 0</div>
+    </div>
+
+    <script>
+        let score = 0;
+        let totalQuestions = 0;
+        let timeLeft = 30;
+        let timer;
+        let lives = 3;
+        let currentLevel = 1;
+
+        const difficultySelect = document.getElementById('difficulty');
+        const timerDisplay = document.getElementById('timer');
+        const levelDisplay = document.getElementById('level');
+        const feedbackDisplay = document.getElementById('feedback');
+        const livesContainer = document.getElementById('lives');
+
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = 30;
+            timerDisplay.textContent = `זמן: ${timeLeft} שניות`;
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `זמן: ${timeLeft} שניות`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function generateQuestion() {
+            const difficulty = difficultySelect.value;
+            const operations = ['+', '-'];
+            const operation = operations[Math.floor(Math.random() * operations.length)];
+            
+            let num1, num2;
+            switch(difficulty) {
+                case 'easy':
+                    num1 = Math.floor(Math.random() * 11);
+                    num2 = Math.floor(Math.random() * (20 - num1 + 1));
+                    break;
+                case 'medium':
+                    num1 = Math.floor(Math.random() * 21);
+                    num2 = Math.floor(Math.random() * (30 - num1 + 1));
+                    break;
+                case 'hard':
+                    num1 = Math.floor(Math.random() * 31);
+                    num2 = Math.floor(Math.random() * (50 - num1 + 1));
+                    break;
+            }
+
+            const correctAnswer = operation === '+' ? num1 + num2 : num1 - num2;
+            const question = `${num1} ${operation} ${num2} = ?`;
+            
+            const answerButtons = document.getElementById('answers');
+            answerButtons.innerHTML = '';
+            
+            const answers = [correctAnswer];
+            while (answers.length < 4) {
+                const wrongAnswer = Math.floor(Math.random() * 50) + 1;
+                if (!answers.includes(wrongAnswer)) {
+                    answers.push(wrongAnswer);
+                }
+            }
+
+            answers.sort(() => Math.random() - 0.5);
+
+            document.getElementById('question').textContent = question;
+
+            answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = answer;
+                button.onclick = () => checkAnswer(answer, correctAnswer);
+                answerButtons.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedAnswer, correctAnswer) {
+            totalQuestions++;
+            if (selectedAnswer === correctAnswer) {
+                score++;
+                feedbackDisplay.textContent = 'כל הכבוד! תשובה נכונה!';
+                feedbackDisplay.style.color = 'green';
+                
+                if (score % 5 === 0) {
+                    currentLevel++;
+                    levelDisplay.textContent = `רמה: ${currentLevel}`;
+                    startTimer(); // Reset timer for each level
+                }
+            } else {
+                lives--;
+                feedbackDisplay.textContent = 'אופס! תשובה לא נכונה';
+                feedbackDisplay.style.color = 'red';
+                
+                const lifeElements = document.querySelectorAll('.life');
+                lifeElements[lives].classList.add('lost');
+
+                if (lives <= 0) {
+                    endGame();
+                }
+            }
+
+            document.getElementById('score').textContent = `ניקוד: ${score}`;
+            generateQuestion();
+        }
+
+        function endGame() {
+            clearInterval(timer);
+            alert(`המשחק נגמר! ניקוד סופי: ${score}`);
+            resetGame();
+        }
+
+        function resetGame() {
+            score = 0;
+            totalQuestions = 0;
+            lives = 3;
+            currentLevel = 1;
+            
+            document.getElementById('score').textContent = 'ניקוד: 0';
+            levelDisplay.textContent = 'רמה: 1';
+            feedbackDisplay.textContent = '';
+            
+            const lifeElements = document.querySelectorAll('.life');
+            lifeElements.forEach(life => life.classList.remove('lost'));
+            
+            startTimer();
+            generateQuestion();
+        }
+
+        difficultySelect.addEventListener('change', resetGame);
+
+        // התחלת המשחק
+        startTimer();
+        generateQuestion();
+    </script>
+</body>
+</html>
